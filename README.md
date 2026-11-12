@@ -105,7 +105,58 @@ Así la define el servidor en la respuesta a `tools/list`:
 
 ## 5. Actividad C: ampliar la conversación
 
-_(Pendiente.)_
+### Código agregado
+
+En la parte 3 de `cliente_mcp.mjs`, antes del paso 5 (`servidor.stdin.end()`):
+
+```js
+// Actividad C.
+// Una lectura correcta: archivo dentro de la carpeta permitida.
+await solicitar('tools/call', {
+  name: 'read_text_file',
+  arguments: { path: 'datos/calificaciones.csv' },
+});
+
+// Una lectura prohibida: ruta fuera de la carpeta de la practica.
+await solicitar('tools/call', {
+  name: 'read_text_file',
+  arguments: { path: 'C:/Windows/win.ini' },
+});
+
+// Un metodo que no existe en el protocolo.
+await solicitar('herramientas/inventada', {});
+```
+
+Al ejecutar `node cliente_mcp.mjs` (código de salida 0), `salida/traza.jsonl` quedó con **13 líneas**. La salida de la terminal está en [`evidencias/terminal_cliente_C.txt`](evidencias/terminal_cliente_C.txt). Las tres solicitudes nuevas se comportaron así:
+
+| `id` | Solicitud | Resultado |
+|---|---|---|
+| 4 | `tools/call` `read_text_file` con `datos/calificaciones.csv` | `result` con el contenido completo del CSV |
+| 5 | `tools/call` `read_text_file` con `C:/Windows/win.ini` | `result` con `"isError": true` (falla) |
+| 6 | `herramientas/inventada` | `error` con código `-32601` (falla) |
+
+> **Nota de privacidad:** el mensaje de error del `id` 5 traía la ruta real de la carpeta de la práctica, con el nombre de usuario del sistema. En `salida/traza.jsonl` y en los archivos `evidencias/terminal_cliente_*.txt` ese nombre se sustituyó por `TU_USUARIO`, como sugiere la guía. Es el único cambio que se hizo a esos archivos.
+
+### Las dos respuestas fallidas (copiadas de la traza)
+
+Respuesta al `id` 5, la lectura prohibida:
+
+```json
+{"direccion":"SERVIDOR -> CLIENTE","mensaje":{"result":{"content":[{"type":"text","text":"Access denied - path outside allowed directories: C:\\Windows\\win.ini not in C:\\Users\\TU_USUARIO\\practica2-mcp"}],"isError":true},"jsonrpc":"2.0","id":5}}
+```
+
+Respuesta al `id` 6, el método inventado:
+
+```json
+{"direccion":"SERVIDOR -> CLIENTE","mensaje":{"jsonrpc":"2.0","id":6,"error":{"code":-32601,"message":"Method not found"}}}
+```
+
+### En qué se diferencian
+
+- **`id` 5: error de ejecución de herramienta.** El método `tools/call` existe y los parámetros son válidos, así que el servidor **sí invocó** `read_text_file`. Lo que falló fue el trabajo de la herramienta: la ruta está fuera de las carpetas permitidas. Se reconoce porque la respuesta trae **`result`**, no `error`, con un `content` normal cuyo texto explica el problema ("Access denied - path outside allowed directories") y el campo **`"isError": true`**. Para JSON-RPC esta solicitud se atendió bien. El fallo lo cuenta la herramienta dentro de su resultado, y quien lo lea, por ejemplo un modelo, puede entenderlo y corregirse.
+- **`id` 6: error de protocolo.** El servidor **no pudo atender** el mensaje porque `herramientas/inventada` no es un método que conozca, así que no se ejecutó nada. Se reconoce porque la respuesta trae **`error`** en lugar de `result`, con **`code: -32601`** y **`message: "Method not found"`**. Ese código es el que JSON-RPC 2.0 reserva para "método no encontrado".
+
+En los dos casos la respuesta conserva el `id` de su solicitud, así que el cliente las empareja igual que a las respuestas correctas.
 
 ## 6. Actividad D: comparar dos clientes
 

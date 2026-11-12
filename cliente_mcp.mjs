@@ -69,5 +69,21 @@ await solicitar('tools/call', {
   arguments: { path: 'datos' },
 });
 
+// Actividad C.
+// Una lectura correcta: archivo dentro de la carpeta permitida.
+await solicitar('tools/call', {
+  name: 'read_text_file',
+  arguments: { path: 'datos/calificaciones.csv' },
+});
+
+// Una lectura prohibida: ruta fuera de la carpeta de la practica.
+await solicitar('tools/call', {
+  name: 'read_text_file',
+  arguments: { path: 'C:/Windows/win.ini' },
+});
+
+// Un metodo que no existe en el protocolo.
+await solicitar('herramientas/inventada', {});
+
 // 5. Al cerrar la entrada del servidor, este termina.
 servidor.stdin.end();
