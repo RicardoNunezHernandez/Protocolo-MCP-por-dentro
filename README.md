@@ -76,7 +76,32 @@ Versión del Inspector que muestra su interfaz:
 
 ## 4. Actividad B: un cliente MCP mínimo
 
-_(Pendiente.)_
+`cliente_mcp.mjs` se copió de las tres partes de la guía y se ejecutó con `node cliente_mcp.mjs`. Terminó con código de salida 0 y dejó `salida/traza.jsonl` con **7 líneas**: 4 mensajes del cliente y 3 del servidor. La salida completa de la terminal está en [`evidencias/terminal_cliente_B.txt`](evidencias/terminal_cliente_B.txt).
+
+### Los siete mensajes
+
+| # | Dirección | Método o contenido | Tipo de mensaje | `id` | Función del cliente que lo produjo |
+|---|---|---|---|---|---|
+| 1 | Cliente → Servidor | `initialize` (propone `2025-06-18`, `capabilities: {}`, `clientInfo` `cliente-minimo` 1.0.0) | Solicitud | 1 | `solicitar()` |
+| 2 | Servidor → Cliente | `result`: versión `2025-06-18`, capacidades `tools` y `resources`, `serverInfo` `secure-filesystem-server` 2.3.0 | Respuesta | 1 | Lector de líneas (`createInterface`) |
+| 3 | Cliente → Servidor | `notifications/initialized` | Notificación | — | `notificar()` |
+| 4 | Cliente → Servidor | `tools/list` | Solicitud | 2 | `solicitar()` |
+| 5 | Servidor → Cliente | `result.tools`: definición de las 16 herramientas | Respuesta | 2 | Lector de líneas |
+| 6 | Cliente → Servidor | `tools/call` con `name: "list_directory"` y `path: "datos"` | Solicitud | 3 | `solicitar()` |
+| 7 | Servidor → Cliente | `result.content`: `[FILE] calificaciones.csv` | Respuesta | 3 | Lector de líneas |
+
+**Cómo se empareja cada respuesta con su solicitud:** `solicitar()` asigna un `id` nuevo (`siguienteId++`) y guarda en el mapa `pendientes` la función que resuelve su promesa. Cuando llega una línea del servidor, el lector busca `pendientes.get(mensaje.id)` y la llama. Así cada `await solicitar(...)` termina cuando llega la respuesta con su mismo `id`. La notificación no tiene `id`, no se guarda en `pendientes` y el cliente no espera nada por ella.
+
+Las líneas sueltas de la terminal, como `Secure MCP Filesystem Server running on stdio`, `Effective allowed directories (from the command line): ...` y `Client does not support MCP Roots, ...`, salen del stderr del servidor. No son mensajes del protocolo y no aparecen en la traza: el cliente lanza el servidor con `stdio: ['pipe', 'pipe', 'inherit']`, así que stderr va directo a la terminal y solo stdout se interpreta como JSON-RPC.
+
+### La herramienta `list_directory`
+
+Así la define el servidor en la respuesta a `tools/list`:
+
+- **Descripción:** muestra lo que hay directamente dentro de una carpeta, sin entrar en subcarpetas. Marca cada entrada como `[FILE]` (archivo) o `[DIR]` (carpeta) y devuelve una línea por entrada. La propia descripción recomienda otras herramientas para otros casos: `list_directory_with_sizes` si también quieres tamaños u ordenar por tamaño, y `directory_tree` para ver todo el árbol. Solo funciona dentro de las carpetas permitidas.
+- **`inputSchema`:** espera un objeto con un único parámetro obligatorio (`required: ["path"]`), `path`, de tipo texto. Es la carpeta a listar, absoluta o relativa a una carpeta permitida, y debe quedar dentro de las carpetas permitidas.
+- **`annotations`:** `readOnlyHint: true` (no modifica nada), `idempotentHint: true` (repetirla con los mismos argumentos no tiene efectos adicionales), `destructiveHint: false` (no borra ni sobrescribe) y `openWorldHint: false` (solo trabaja con un mundo cerrado, el sistema de archivos local permitido, sin servicios externos). Son pistas para el cliente, por ejemplo para decidir si pide confirmación antes de usarla, no garantías.
+- Además trae `title: "List Directory"` y un `outputSchema`: el resultado estructurado es un objeto con un campo `content` de tipo texto.
 
 ## 5. Actividad C: ampliar la conversación
 
