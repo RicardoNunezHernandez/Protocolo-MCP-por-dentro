@@ -15,7 +15,38 @@ Entorno con el que se trabajó:
 
 ## 2. Requisitos y reproducción
 
-_(Se completa al final de la práctica.)_
+**Qué instalar:**
+
+- **Node.js 22.19 o superior.** Es un requisito del MCP Inspector; el cliente mínimo no tiene dependencias. Comprueba tu versión con `node --version`.
+- **Git**, para clonar el repositorio.
+- **Un navegador** (Chrome, Edge o Firefox), para la interfaz del Inspector.
+- **Conexión a internet** la primera vez: `npx` descarga el servidor y el Inspector.
+
+No hace falta `npm install`, ni claves, ni cuentas.
+
+**Comandos**, en PowerShell en Windows. La guía advierte que Git Bash altera los argumentos al lanzar el Inspector.
+
+```powershell
+git clone https://github.com/RicardoNunezHernandez/Protocolo-MCP-por-dentro.git
+cd Protocolo-MCP-por-dentro
+
+# Actividades B y C: cliente minimo (regenera salida/traza.jsonl con 13 mensajes)
+node cliente_mcp.mjs
+
+# Actividad A: Inspector (abre el navegador en http://127.0.0.1:6274 con una clave de acceso)
+npx -y "@modelcontextprotocol/inspector" --config mcp.json
+```
+
+En el Inspector: activa el interruptor de la tarjeta `filesystem` y revisa el panel *Messages*. En la pestaña *Tools* ejecuta `List Directory` con `path` = `datos` y luego `Read Text File` con `datos/calificaciones.csv`. Para guardar el historial usa *Export*.
+
+Para el experimento de la actividad D, cambia temporalmente `protocolVersion: '2025-06-18'` por `'1999-01-01'` en `cliente_mcp.mjs`, ejecútalo y restaura el valor.
+
+Ten en cuenta dos cosas:
+
+- Al ejecutar el cliente, `salida/traza.jsonl` se sobrescribe y el mensaje de error del `id` 5 mostrará la ruta de **tu** carpeta.
+- `npx -y` descarga la versión más reciente del servidor y del Inspector, así que las versiones pueden no coincidir con las de la sección 1.
+
+La reproducción del cliente se comprobó clonando este repositorio en otra carpeta y ejecutando `node cliente_mcp.mjs` en el clon. Terminó con código 0 y produjo una traza de 13 líneas que acaba con el error `-32601`.
 
 ## 3. Actividad A: el protocolo visto con el MCP Inspector
 
@@ -225,8 +256,31 @@ sequenceDiagram
 
 ## 8. Problemas encontrados
 
-_(Se completa al final de la práctica.)_
+**Diferencias con la guía:**
+
+- **Versiones más nuevas.** La guía se comprobó con el Inspector 2.13.0 y el servidor 2.2.0. Aquí se usaron el Inspector **2.15.0** y el servidor **2.3.0**, porque `npx -y` descarga la versión más reciente. Aun así, los resultados esperados de cada actividad se cumplieron: historial con al menos 7 mensajes, traza de 7 líneas en B y de 13 en C, y la misma forma de los dos errores.
+- **Versión del protocolo del Inspector.** El Inspector 2.15.0 propone `2025-11-25`, más nueva que la `2025-06-18` del cliente mínimo. Por eso la tabla de la actividad D muestra versiones distintas para cada cliente.
+- **Nombre del historial exportado.** *Export* descarga el archivo con un nombre automático (`inspector-protocol-filesystem-<fecha>.json`). Se renombró a `salida/historial_inspector.json`, como pide la guía.
+- **Mensajes del servidor en stderr.** Además de `Secure MCP Filesystem Server running on stdio`, el servidor 2.3.0 imprime en stderr `Effective allowed directories ...` y `Client does not support MCP Roots, ...`. Tampoco son mensajes del protocolo y no aparecen en la traza.
+
+**Datos personales:** el mensaje de error del `id` 5 y las líneas de stderr del servidor muestran la ruta de la carpeta de la práctica, con el nombre de usuario del sistema. Se sustituyó por `TU_USUARIO` en `salida/traza.jsonl` y en `evidencias/terminal_cliente_*.txt`. Las capturas no muestran la barra de direcciones (que contiene la clave de acceso del Inspector) ni otros datos personales.
+
+**Diagrama Mermaid:** no se pudo renderizar con `mermaid-cli` en el entorno de trabajo. En su lugar se revisó visualmente que el diagrama se dibuja correctamente, y con un script se comprobó que su texto tiene 13 flechas con los `id` en orden, 4 notas y ningún punto y coma.
+
+**Qué se verificó:**
+
+- `salida/historial_inspector.json` es JSON válido con 8 entradas, entre ellas `initialize`, `tools/list` y `tools/call`.
+- La traza de la actividad B tenía 7 líneas (4 del cliente y 3 del servidor), y la última respuesta contiene `calificaciones.csv`.
+- La traza final tiene 13 líneas, cada una es JSON válido, el `id` 4 trae el CSV, el `id` 5 trae `isError: true` y el `id` 6 trae `error.code -32601`.
+- Después del experimento de la actividad D, la traza volvió a mostrar la versión `2025-06-18`.
+- La reproducción desde un clon limpio funciona (sección 2).
+- Ningún archivo de texto del repositorio contiene el nombre de usuario del sistema.
 
 ## 9. Fuentes
 
-_(Se completa al final de la práctica.)_
+- Guía de la práctica: *Práctica 2. Ver el protocolo MCP por dentro* (MCP, guía de práctica).
+- Especificación de MCP, incluido el ciclo de vida y la negociación de versión: https://modelcontextprotocol.io/specification
+- Especificación de JSON-RPC 2.0, incluidos los códigos de error como `-32601`: https://www.jsonrpc.org/specification
+- MCP Inspector: https://github.com/modelcontextprotocol/inspector
+- Servidor `filesystem`: https://github.com/modelcontextprotocol/servers
+- Diagramas de secuencia en Mermaid: https://mermaid.js.org/syntax/sequenceDiagram.html
