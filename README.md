@@ -160,7 +160,37 @@ En los dos casos la respuesta conserva el `id` de su solicitud, así que el clie
 
 ## 6. Actividad D: comparar dos clientes
 
-_(Pendiente.)_
+Comparación de los mensajes `initialize` y sus respuestas en `salida/historial_inspector.json` (Inspector) y en `salida/traza.jsonl` (cliente mínimo):
+
+| | Inspector | Cliente mínimo |
+|---|---|---|
+| Nombre y versión del cliente (`clientInfo`) | `mcp-inspector` 2.15.0 | `cliente-minimo` 1.0.0 |
+| Versión del protocolo que propuso el cliente | `2025-11-25` | `2025-06-18` |
+| Versión del protocolo que respondió el servidor | `2025-11-25` | `2025-06-18` |
+| Capacidades que declaró el cliente | `sampling`, `elicitation` (`form`, `url`), `roots` (`listChanged: true`), `tasks` y `extensions` (`tasks`, `ui`, `skills`) | Ninguna (`capabilities: {}`) |
+| ¿El servidor envió una solicitud al cliente? ¿Cuál? | Sí: `roots/list` (el Inspector respondió `{"roots": []}`) | No |
+
+En los dos casos el servidor fue el mismo (`secure-filesystem-server` 2.3.0) y declaró las mismas capacidades (`tools` y `resources`, ambas con `listChanged: true`).
+
+### Por qué el servidor se comportó distinto con cada cliente
+
+- **Versión del protocolo.** El servidor contestó con la misma versión que propuso cada cliente: `2025-11-25` al Inspector y `2025-06-18` al cliente mínimo. Soporta las dos, así que aceptó la propuesta de cada uno. La especificación de MCP dice que, si el servidor soporta la versión pedida, debe responder con esa misma versión.
+- **La solicitud `roots/list`.** El Inspector declaró la capacidad `roots`, así que el servidor sabía que podía preguntarle sus carpetas raíz y lo hizo justo después de la inicialización. El cliente mínimo no declaró ninguna capacidad y el servidor no le pidió nada: ningún lado debe usar una capacidad que el otro no declaró. El propio servidor lo dice en su stderr al atender al cliente mínimo: `Client does not support MCP Roots, using allowed directories set from server args` (ver [`evidencias/terminal_cliente_C.txt`](evidencias/terminal_cliente_C.txt)). Con el Inspector, la lista de raíces llegó vacía y, aun así, las llamadas posteriores sobre `datos` funcionaron.
+
+Hubo otra diferencia, pero esa la decidió cada cliente y no el servidor: después de inicializar, el Inspector pidió por su cuenta `resources/list`, `tools/list` y `resources/templates/list` para llenar su interfaz. El cliente mínimo solo pide `tools/list`.
+
+### Experimento: versión de protocolo inexistente
+
+Se cambió temporalmente `protocolVersion` a `'1999-01-01'` y se ejecutó el cliente. Las dos primeras líneas de esa traza están guardadas en [`evidencias/experimento_version_1999.jsonl`](evidencias/experimento_version_1999.jsonl):
+
+```json
+{"direccion":"CLIENTE -> SERVIDOR","mensaje":{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"1999-01-01","capabilities":{},"clientInfo":{"name":"cliente-minimo","version":"1.0.0"}}}}
+{"direccion":"SERVIDOR -> CLIENTE","mensaje":{"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{"listChanged":true},"resources":{"listChanged":true}},"serverInfo":{"name":"secure-filesystem-server","version":"2.3.0"}},"jsonrpc":"2.0","id":1}}
+```
+
+**Resultado:** el servidor no devolvió un error. Respondió con otra versión que sí soporta, **`2025-11-25`**, la misma que aceptó con el Inspector. Esto coincide con la especificación: si el servidor no soporta la versión pedida, responde con otra que sí soporte, de preferencia la más reciente. La sesión siguió como si nada y la traza tuvo los mismos 13 mensajes, porque el cliente mínimo no revisa la versión de la respuesta. Según la especificación, un cliente real que no soporte la versión que le devuelve el servidor debería desconectarse.
+
+Después se restauró `protocolVersion: '2025-06-18'` y se volvió a ejecutar el cliente. La traza de `salida/traza.jsonl` es la de la actividad C: 13 mensajes y el servidor respondió `2025-06-18`.
 
 ## 7. Actividad E: diagrama de secuencia
 
