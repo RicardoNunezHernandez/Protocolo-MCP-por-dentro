@@ -194,7 +194,34 @@ Después se restauró `protocolVersion: '2025-06-18'` y se volvió a ejecutar el
 
 ## 7. Actividad E: diagrama de secuencia
 
-_(Pendiente.)_
+Sesión completa del cliente mínimo, tal como quedó en la actividad C. Contiene los 13 mensajes de `salida/traza.jsonl`, en orden y con su `id`. Las dos respuestas fallidas están marcadas con su clase de error y con un fondo de color: amarillo para el error de ejecución y rojo para el de protocolo. El cierre no es un mensaje JSON-RPC: el cliente cierra el stdin del servidor y este termina.
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant S as Servidor
+    Note over C,S: Inicializacion
+    C->>S: initialize (id 1)
+    S-->>C: result con version, capacidades e identidad (id 1)
+    C-)S: notifications/initialized (sin id)
+    Note over C,S: Operacion
+    C->>S: tools/list (id 2)
+    S-->>C: result con las 16 herramientas (id 2)
+    C->>S: tools/call list_directory datos (id 3)
+    S-->>C: result [FILE] calificaciones.csv (id 3)
+    C->>S: tools/call read_text_file datos/calificaciones.csv (id 4)
+    S-->>C: result con el contenido del CSV (id 4)
+    C->>S: tools/call read_text_file C:/Windows/win.ini (id 5)
+    rect rgba(255, 190, 0, 0.25)
+    S-->>C: ERROR DE EJECUCION - result con isError true, Access denied (id 5)
+    end
+    C->>S: herramientas/inventada (id 6)
+    rect rgba(255, 0, 0, 0.18)
+    S-->>C: ERROR DE PROTOCOLO - error -32601 Method not found (id 6)
+    end
+    Note over C,S: Cierre
+    Note over C,S: el cliente cierra stdin y el servidor termina (no es un mensaje JSON-RPC)
+```
 
 ## 8. Problemas encontrados
 
